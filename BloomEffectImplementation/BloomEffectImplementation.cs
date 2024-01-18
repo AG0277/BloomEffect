@@ -42,7 +42,7 @@ namespace BloomEffectImplementation
         {
             threads = 1;
             sigma = 25;
-            size = 10;
+            size = 34;
         }
         public int GetThreads()
         {
@@ -192,19 +192,42 @@ namespace BloomEffectImplementation
 
                     for (int x = 0; x < width; x++)
                     {
-                        if (y == 30 && x ==30)
+                        //double red = 0, green = 0, blue = 0;
+                        //for (int i = 0; i < kernel.Length; i++)
+                        //{
+
+                        //    int yOffset = y + i - radius;
+
+                        //    if (yOffset >= 0 && yOffset < height)
+                        //    {
+                        //        int index = (yOffset * stride) + (x * bytesPerPixel);
+
+                        //        double weight = kernel[i];
+                        //        red += sourcePixels[index + 2] * weight;
+                        //        green += sourcePixels[index + 1] * weight;
+                        //        blue += sourcePixels[index] * weight;
+                        //    }
+                        //}
+
+                        //int destIndex = (y * stride) + (x * bytesPerPixel);
+                        //destPixels[destIndex] = (byte)blue;
+                        //destPixels[destIndex + 1] = (byte)green;
+                        //destPixels[destIndex + 2] = (byte)red;
+                        //destPixels[destIndex + 3] = 255;
+
+                        if (y == 30 && x == 30)
                         { int adsa = 2; }
 
-                            MyProc2(sourcePixels,
+                        MyProc2(sourcePixels,
                         destPixels,
-                        x,y,
+                        x, y,
                         kernel,
                         radius,
                         stride,
                         height);
-                    }
+                    
                     // kernellength, yOffSet, height, pointertoArray, pointerTOARRAYDESTINATION, weight
-
+                }
                 };
                 int z = 2;
             }

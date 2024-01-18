@@ -1,11 +1,11 @@
 .data   
     myFloat1 REAL4 3.00
-    thresholdValue REAL4 191.00
+    thresholdValue dd 191
     myInt dd 4 
     two dd 2
     radiusLenght dd 0
     myImmediateValue dq 12345678912
-    rgbaMask db 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0  ; RGBA mask for blending
+    One dd 1
 .code
 
 MyProc1 proc
@@ -32,9 +32,12 @@ MyProc1 proc
             add rax, r13
             add rax, r14
 
+            vpxor xmm0,xmm0, xmm0
+            vpxor xmm1,xmm1, xmm1
             cvtsi2ss xmm1, rax
             movss xmm0, dword ptr [myFloat1]
-            divss xmm1, xmm0
+            divps xmm1, xmm0
+            CVTPS2DQ xmm1,xmm1
 
             movss xmm2, dword ptr [thresholdValue]
             comiss xmm1, xmm2
@@ -43,6 +46,7 @@ MyProc1 proc
             mov byte ptr [rdx + r11 + 1] , 0
             mov byte ptr [rdx + r11 + 2] , 0
             mov byte ptr [rdx + r11 + 3] , 255
+            jmp skip_191
 
 
             greater_than_191:
@@ -51,7 +55,7 @@ MyProc1 proc
             mov [rdx + r11 + 2] , r14
             mov byte ptr [rdx + r11 + 3] , 255
 
-
+            skip_191:
             ; Update resultIndex
             add R11, R10
 
@@ -88,15 +92,15 @@ MyProc2 PROC
     ; r11d = radius (use a 32-bit register for radius)
     ; r15d = stride (stride of the image)
     ; r13d = height (height of the image)
-
+    ; xmm3 kernel
+    ; xmm2 getPixel
+    ; xmm1 overall pixel
     ; Initialize accumulators for red, green, and blue channels
 
     mov eax, r11d
     shl eax, 1
     mov [radiusLenght], eax
-    pxor xmm0, xmm0  ; red
-    pxor xmm1, xmm1  ; green
-    pxor xmm2, xmm2  ; blue
+    pxor xmm2, xmm2  ; red
 
     mov rax, [rsp + 40] 
     mov r10, rax 
@@ -110,6 +114,10 @@ MyProc2 PROC
     mov rax, [rsp + 64] 
     mov r13, rax 
 
+    PINSRW xmm2, word ptr[one],0
+    shufps xmm2,xmm2, 00h
+    CVTDQ2PS xmm2, xmm2 ; convert int to float in xmm
+   
 
     ; Loop over the kernel
     xor esi, esi  ; esi = i (loop counter)
@@ -132,23 +140,30 @@ MyProc2 PROC
         ; Load the weight from the kernel (double-precision)
         movsd xmm3, qword ptr [r10 + rsi * 8] ; Load kernel weight
         CVTPD2PS xmm3, xmm3 ; convert double to float
+        shufps xmm3,xmm3, 00h
+        mulps xmm2,xmm3
+        
+        movzx r14, byte ptr[rcx+rbx+2]
+        PINSRQ xmm5, r14,1
+        movzx r14d, byte ptr[rcx+rbx+1]
+        PINSRD xmm5, r14d,1
+        movzx r14d,byte ptr[rcx+rbx]
+        PINSRD xmm5, r14d,0
+        cvtdq2ps xmm5, xmm5 ; convert to float
+
+        mulps xmm5, xmm3
+        addps xmm1, xmm5
 
 
         skip_pixel:
+        xor eax,eax
         inc esi
-        cmp esi, [radiusLenght] ; Assuming a kernel size of 5
-        je loop_kernel
-
-        ; Load source pixel values as 4 32-bit integers (RGBA format)   
-        movzx r14, byte ptr[rcx+rbx+2]
-        PINSRQ xmm1, r14,1
-        movzx r14d, byte ptr[rcx+rbx+1]
-        PINSRD xmm1, r14d,1
-        PINSRB xmm1, byte ptr[rcx+rbx],0
-        cvtdq2ps xmm1, xmm1 ; convert to float
-        CVTPS2DQ xmm1,xmm1 ; convert from float
+        cmp esi, [radiusLenght] 
+        jl loop_kernel
 
 
+
+CVTPS2DQ xmm1,xmm1 ; convert from float
 mov eax, r8d           ; Copy x-coordinate to eax
 imul eax, 4            ; Multiply by 4 (assuming 4 bytes per pixel)
 imul r9d, r15d         ; Multiply by the stride
@@ -167,17 +182,6 @@ movd ebx,xmm1
 mov [rdx+rax+2], ebx
 
 mov byte ptr[rdx+rax+3], 255
-
-
-
-;movaps [eax], xmm1
-;shufps xmm1, xmm1, 55h
-;movd rbx,xmm1
-;mov r11d, ebx
-;xor rbx,rbx
-;mov rbx,r11
-;mov [rdx+rax], ebx
-
 
     ret
 MyProc2 ENDP
