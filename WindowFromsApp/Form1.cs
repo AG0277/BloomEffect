@@ -11,8 +11,6 @@ namespace WindowFromsApp
 {
     public partial class Form1 : Form
     {
-        [DllImport(@"C:\Users\Artur\source\repos\BloomEffect\x64\Debug\JAAsm.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int MyProc1(int a, int b, int c);
 
         BloomEffectImplementation.BloomEffectImplementation bloomEffectImplementation;
         Stopwatch stopwatch;

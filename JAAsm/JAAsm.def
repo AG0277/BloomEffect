@@ -1,3 +1,5 @@
 LIBRARY JAAsm
 
 EXPORTS MyProc1
+
+EXPORTS MyProc2
