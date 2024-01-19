@@ -3,6 +3,7 @@ using System.Drawing;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Drawing.Imaging;
+using System.Security.Policy;
 
 namespace BloomEffectImplementation
 {
@@ -11,6 +12,7 @@ namespace BloomEffectImplementation
         private int threads;
         private int sigma;
         private int size;
+        private bool asm;
         [DllImport(@"C:\Users\Artur\source\repos\BloomEffect\x64\Debug\JAAsm.dll", CallingConvention = CallingConvention.Cdecl)]
    
         public static extern int MyProc1(
@@ -20,14 +22,6 @@ namespace BloomEffectImplementation
         int height
        );
         [DllImport(@"C:\Users\Artur\source\repos\BloomEffect\x64\Debug\JAAsm.dll", CallingConvention = CallingConvention.Cdecl)]
-        //public static extern int MyProc2(
-        //byte[] originalPixels,
-        //byte[] bloomPixels,
-        //double[] kernel,
-        //int width,
-        //int height,
-        //int kernelRadius
-        //);
         public static extern int MyProc2(byte[] sourcePixels,
         byte[] destPixels,
         int x,
@@ -36,13 +30,23 @@ namespace BloomEffectImplementation
         int radius,
         int stride,
         int height);
-        //public static extern int MyProc1(int a, int b, int c);
+
+        [DllImport(@"C:\Users\Artur\source\repos\BloomEffect\x64\Debug\JAAsm.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int MyProc3(byte[] sourcePixels,
+        byte[] destPixels,
+        int x,
+        int y,
+        double[] kernel,
+        int radius,
+        int stride,
+        int width);
 
         public BloomEffectImplementation()
         {
             threads = 1;
             sigma = 25;
             size = 34;
+            asm = true;
         }
         public int GetThreads()
         {
@@ -52,6 +56,10 @@ namespace BloomEffectImplementation
         public void SetThreads(int value)
         {
             threads = value;
+        }
+        public void SetAsm(bool value)
+        {
+            asm = value;
         }
 
         public Bitmap ApplyBloomEffects(Bitmap originalImage)
@@ -74,49 +82,53 @@ namespace BloomEffectImplementation
                 Marshal.Copy(originalData.Scan0, originalPixels, 0, originalPixels.Length);
 
 
-                //for (int y = 0; y < height; y++)
-                //{
-                //    for (int x = 0; x < width; x++)
-                //    {
-                //        int index = y * stride + x * bytesPerPixel;
-
-                //        byte blue = originalPixels[index];
-                //        byte green = originalPixels[index + 1];
-                //        byte red = originalPixels[index + 2];
-
-                //        float brightness = (red + green + blue) / 3.0f;
-
-                //        byte resultBlue, resultGreen, resultRed;
-
-                //        if (brightness > 191f)
-                //        {
-                //            resultBlue = blue;
-                //            resultGreen = green;
-                //            resultRed = red;
-                //        }
-                //        else
-                //        {
-                //            resultBlue = 0;
-                //            resultGreen = 0;
-                //            resultRed = 0;
-                //        }
-
-                //        int resultIndex = y * stride + x * bytesPerPixel;
-
-                //        bloomPixels[resultIndex] = resultBlue;
-                //        bloomPixels[resultIndex + 1] = resultGreen;
-                //        bloomPixels[resultIndex + 2] = resultRed;
-                //        bloomPixels[resultIndex + 3] = 255;
-                //    }
-                //};
-
-
-                MyProc1(
-                originalPixels,
+                if (asm)
+                {
+                    MyProc1(
+                    originalPixels,
                     bloomPixels,
                     width,
                     height
                 );
+                }
+                else
+                {
+                    for (int y = 0; y < height; y++)
+                    {
+                        for (int x = 0; x < width; x++)
+                        {
+                            int index = y * stride + x * bytesPerPixel;
+
+                            byte blue = originalPixels[index];
+                            byte green = originalPixels[index + 1];
+                            byte red = originalPixels[index + 2];
+
+                            float brightness = (red + green + blue) / 3.0f;
+
+                            byte resultBlue, resultGreen, resultRed;
+
+                            if (brightness > 191f)
+                            {
+                                resultBlue = blue;
+                                resultGreen = green;
+                                resultRed = red;
+                            }
+                            else
+                            {
+                                resultBlue = 0;
+                                resultGreen = 0;
+                                resultRed = 0;
+                            }
+
+                            int resultIndex = y * stride + x * bytesPerPixel;
+
+                            bloomPixels[resultIndex] = resultBlue;
+                            bloomPixels[resultIndex + 1] = resultGreen;
+                            bloomPixels[resultIndex + 2] = resultRed;
+                            bloomPixels[resultIndex + 3] = 255;
+                        }
+                    };
+                }
 
                 Marshal.Copy(bloomPixels, 0, bloomData.Scan0, bloomPixels.Length);
             }
@@ -183,87 +195,129 @@ namespace BloomEffectImplementation
 
             Marshal.Copy(sourceData.Scan0, sourcePixels, 0, sourcePixels.Length);
 
-
-            if (horizontal)
+            if (asm)
             {
-
-                for (int y = 0; y < height; y++)
+                if (horizontal)
                 {
 
-                    for (int x = 0; x < width; x++)
+                    Parallel.For(0, height, new ParallelOptions
                     {
-                        //double red = 0, green = 0, blue = 0;
-                        //for (int i = 0; i < kernel.Length; i++)
-                        //{
+                        MaxDegreeOfParallelism = this.threads
+                    }, y =>
+                    {
 
-                        //    int yOffset = y + i - radius;
+                        for (int x = 0; x < width; x++)
+                        {
 
-                        //    if (yOffset >= 0 && yOffset < height)
-                        //    {
-                        //        int index = (yOffset * stride) + (x * bytesPerPixel);
 
-                        //        double weight = kernel[i];
-                        //        red += sourcePixels[index + 2] * weight;
-                        //        green += sourcePixels[index + 1] * weight;
-                        //        blue += sourcePixels[index] * weight;
-                        //    }
-                        //}
+                            MyProc2(sourcePixels,
+                            destPixels,
+                            x, y,
+                            kernel,
+                            radius,
+                            stride,
+                            height);
 
-                        //int destIndex = (y * stride) + (x * bytesPerPixel);
-                        //destPixels[destIndex] = (byte)blue;
-                        //destPixels[destIndex + 1] = (byte)green;
-                        //destPixels[destIndex + 2] = (byte)red;
-                        //destPixels[destIndex + 3] = 255;
-
-                        if (y == 30 && x == 30)
-                        { int adsa = 2; }
-
-                        MyProc2(sourcePixels,
-                        destPixels,
-                        x, y,
-                        kernel,
-                        radius,
-                        stride,
-                        height);
-                    
-                    // kernellength, yOffSet, height, pointertoArray, pointerTOARRAYDESTINATION, weight
+                        }
+                    });
                 }
-                };
-                int z = 2;
+                else
+                {
+                    Parallel.For(0, height, new ParallelOptions
+                    {
+                        MaxDegreeOfParallelism = this.threads
+                    }, y =>
+                    {
+                        for (int x = 0; x < width; x++)
+                        {
+
+                            MyProc3(sourcePixels,
+                            destPixels,
+                            x, y,
+                            kernel,
+                            radius,
+                            stride,
+                            width);
+                        }
+                    });
+                }
             }
             else
             {
-                Parallel.For(0, width, new ParallelOptions
+                if (horizontal)
                 {
-                    MaxDegreeOfParallelism = this.threads
-                }, x =>
-                {
-                    for (int y = 0; y < height; y++)
+
+                    Parallel.For(0, height, new ParallelOptions
                     {
-                        double red = 0.0, green = 0.0, blue = 0.0;
+                        MaxDegreeOfParallelism = this.threads
+                    }, y =>
+                    {
 
-                        for (int i = 0; i < kernel.Length; i++)
+                        for (int x = 0; x < width; x++)
                         {
-                            int xOffset = x + i - radius;
-
-                            if (xOffset >= 0 && xOffset < width)
+                            double red = 0, green = 0, blue = 0;
+                            for (int i = 0; i < kernel.Length; i++)
                             {
-                                int index = (y * stride) + (xOffset * bytesPerPixel);
 
-                                double weight = kernel[i];
-                                red += sourcePixels[index + 2] * weight;
-                                green += sourcePixels[index + 1] * weight;
-                                blue += sourcePixels[index] * weight;
+                                int yOffset = y + i - radius;
+
+                                if (yOffset >= 0 && yOffset < height)
+                                {
+                                    int index = (yOffset * stride) + (x * bytesPerPixel);
+
+                                    double weight = kernel[i];
+                                    red += sourcePixels[index + 2] * weight;
+                                    green += sourcePixels[index + 1] * weight;
+                                    blue += sourcePixels[index] * weight;
+                                }
                             }
+
+                            int destIndex = (y * stride) + (x * bytesPerPixel);
+                            destPixels[destIndex] = (byte)blue;
+                            destPixels[destIndex + 1] = (byte)green;
+                            destPixels[destIndex + 2] = (byte)red;
+                            destPixels[destIndex + 3] = 255;
+
+
+
+                        }
+                    });
+                }
+                else
+                {
+                    Parallel.For(0, height, new ParallelOptions
+                    {
+                        MaxDegreeOfParallelism = this.threads
+                    }, y =>
+                    {
+                        for (int x = 0; x < width; x++)
+                        {
+                            double red = 0.0, green = 0.0, blue = 0.0;
+
+                            for (int i = 0; i < kernel.Length; i++)
+                            {
+                                int xOffset = x + i - radius;
+
+                                if (xOffset >= 0 && xOffset < width)
+                                {
+                                    int index = (y * stride) + (xOffset * bytesPerPixel);
+
+                                    double weight = kernel[i];
+                                    red += sourcePixels[index + 2] * weight;
+                                    green += sourcePixels[index + 1] * weight;
+                                    blue += sourcePixels[index] * weight;
+                                }
+                            }
+
+                            int destIndex = (y * stride) + (x * bytesPerPixel);
+                            destPixels[destIndex] = (byte)blue;
+                            destPixels[destIndex + 1] = (byte)green;
+                            destPixels[destIndex + 2] = (byte)red;
+                            destPixels[destIndex + 3] = 255;
                         }
 
-                        int destIndex = (y * stride) + (x * bytesPerPixel);
-                        destPixels[destIndex] = (byte)blue;
-                        destPixels[destIndex + 1] = (byte)green;
-                        destPixels[destIndex + 2] = (byte)red;
-                        destPixels[destIndex + 3] = 255;
-                    }
-                });
+                    });
+                }
             }
 
             Marshal.Copy(destPixels, 0, destData.Scan0, destPixels.Length);

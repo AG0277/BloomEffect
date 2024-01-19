@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
+using System.Threading;
 using System.Windows.Forms;
 
 
@@ -26,33 +27,9 @@ namespace WindowFromsApp
         {
             int processorCount = Environment.ProcessorCount;
             bloomEffectImplementation.SetThreads(processorCount);
-            switch (processorCount)
-            {
-                case 1:
-                    radioButton1.Checked = true;
-                    break;
-                case 2:
-                    radioButton2.Checked = true;
-                    break;
-                case 4:
-                    radioButton3.Checked = true;
-                    break;
-                case 8:
-                    radioButton4.Checked = true;
-                    break;
-                case 16:
-                    radioButton5.Checked = true;
-                    break;
-                case 32:
-                    radioButton6.Checked = true;
-                    break;
-                case 64:
-                    radioButton7.Checked = true;
-                    break;
-
-                default:
-                    break;
-            }
+            radioButton2.Checked = true;
+            bloomEffectImplementation.SetAsm(false);
+            textBox1.Text = processorCount.ToString(); 
         }
         private void button2_Click(object sender, EventArgs e)
         {
@@ -105,39 +82,26 @@ namespace WindowFromsApp
             }
         }
 
-        private void radioButton1_CheckedChanged(object sender, EventArgs e)
+        private void radioButton1_CheckedChanged_1(object sender, EventArgs e)
         {
-            bloomEffectImplementation.SetThreads(1);
+            bloomEffectImplementation.SetAsm(true);
         }
 
         private void radioButton2_CheckedChanged(object sender, EventArgs e)
         {
-            bloomEffectImplementation.SetThreads(2);
+            bloomEffectImplementation.SetAsm(false);
         }
 
-        private void radioButton3_CheckedChanged(object sender, EventArgs e)
+        private void textBox1_KeyPress(object sender, KeyPressEventArgs e)
         {
-            bloomEffectImplementation.SetThreads(4);
+            if (!char.IsDigit(e.KeyChar) && !char.IsControl(e.KeyChar))
+            {
+                e.Handled = true; 
+            }
+            int threads =  e.KeyChar;
+            bloomEffectImplementation.SetThreads(threads);
+
         }
 
-        private void radioButton5_CheckedChanged(object sender, EventArgs e)
-        {
-           bloomEffectImplementation.SetThreads(8);
-        }
-
-        private void radioButton4_CheckedChanged(object sender, EventArgs e)
-        {
-            bloomEffectImplementation.SetThreads(16);
-        }
-
-        private void radioButton6_CheckedChanged(object sender, EventArgs e)
-        {
-           bloomEffectImplementation.SetThreads(32);
-        }
-
-        private void radioButton7_CheckedChanged(object sender, EventArgs e)
-        {
-           bloomEffectImplementation.SetThreads(64);
-        }
     }
 }
