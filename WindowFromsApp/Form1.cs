@@ -98,10 +98,14 @@ namespace WindowFromsApp
             {
                 e.Handled = true; 
             }
-            int threads =  e.KeyChar;
-            bloomEffectImplementation.SetThreads(threads);
+
 
         }
 
+        private void textBox1_TextChanged(object sender, EventArgs e)
+        {
+            int threads = Int32.Parse(textBox1.Text);
+            bloomEffectImplementation.SetThreads(threads);
+        }
     }
 }
