@@ -62,7 +62,58 @@ namespace BloomEffectImplementation
             asm = value;
         }
 
-        public Bitmap ApplyBloomEffects(Bitmap originalImage)
+        public async Task<Bitmap> ApplyBloomEffects(Bitmap originalImage)
+        {
+
+
+            Bitmap bloomImage = ApplyThresholdMapping(originalImage);
+            Bitmap blurredBloom = ApplyGaussianBlur(bloomImage);
+            Bitmap finalImage = MergePictures(originalImage, blurredBloom);
+            
+             return finalImage;
+        }
+        private Bitmap MergePictures(Bitmap original, Bitmap blurred)
+        {
+            int width = original.Width;
+            int height = original.Height;
+
+            Bitmap finalImage = new Bitmap(width, height);
+
+            BitmapData originalData = original.LockBits(new Rectangle(0, 0, width, height), ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
+            BitmapData blurredData = blurred.LockBits(new Rectangle(0, 0, width, height), ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
+            BitmapData finalData = finalImage.LockBits(new Rectangle(0, 0, width, height), ImageLockMode.WriteOnly, PixelFormat.Format32bppArgb);
+
+            int bytesPerPixel = 4;
+            int stride = width * bytesPerPixel;
+
+            byte[] originalPixels = new byte[width * height * bytesPerPixel];
+            byte[] blurredPixels = new byte[width * height * bytesPerPixel];
+            byte[] finalPixels = new byte[width * height * bytesPerPixel];
+
+            Marshal.Copy(originalData.Scan0, originalPixels, 0, originalPixels.Length);
+            Marshal.Copy(blurredData.Scan0, blurredPixels, 0, blurredPixels.Length);
+
+            for (int i = 0; i < originalPixels.Length; i++)
+            {
+                byte originalValue = originalPixels[i];
+                byte blurredValue = blurredPixels[i];
+
+                int finalValue = Math.Min(originalValue + blurredValue, 255);
+
+                finalPixels[i] = (byte)finalValue;
+            }
+
+            Marshal.Copy(finalPixels, 0, finalData.Scan0, finalPixels.Length);
+
+            original.UnlockBits(originalData);
+            blurred.UnlockBits(blurredData);
+            finalImage.UnlockBits(finalData);
+
+
+            return finalImage;
+
+        }
+        private Bitmap ApplyThresholdMapping(Bitmap originalImage)
         {
             int width = originalImage.Width;
             int height = originalImage.Height;
@@ -137,32 +188,8 @@ namespace BloomEffectImplementation
                 originalImage.UnlockBits(originalData);
                 bloomImage.UnlockBits(bloomData);
             }
-
-            Bitmap blurredBloom = ApplyGaussianBlur(bloomImage);
-
-            Bitmap finalImage = new Bitmap(width, height);
-
-
-            for (int x = 0; x < width; x++)
-            {
-                for (int y = 0; y < height; y++)
-                {
-                    Color originalColor = originalImage.GetPixel(x, y);
-                    Color blurredColor = blurredBloom.GetPixel(x, y);
-                    Color finalColor = Color.FromArgb(
-                    Math.Min(originalColor.A + blurredColor.A, 255),
-                    Math.Min(originalColor.R + blurredColor.R, 255),
-                    Math.Min(originalColor.G + blurredColor.G, 255),
-                    Math.Min(originalColor.B + blurredColor.B, 255)
-                    );
-
-                    finalImage.SetPixel(x, y, finalColor);
-                }
-            }
-
-            return finalImage;
+            return bloomImage;
         }
-
         private Bitmap ApplyGaussianBlur(Bitmap image)
         {
             Bitmap result = new Bitmap(image.Width, image.Height);

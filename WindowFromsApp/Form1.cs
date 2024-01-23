@@ -5,6 +5,7 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
 
@@ -53,7 +54,7 @@ namespace WindowFromsApp
             }
         }
 
-        private void button1_Click(object sender, EventArgs e)
+        private async void button1_Click(object sender, EventArgs e)
         {
             stopwatch.Restart();
             List<long> test = new List<long>();
@@ -63,7 +64,10 @@ namespace WindowFromsApp
                 stopwatch.Start();
 
                 Bitmap coppy = new Bitmap((Bitmap)this.UploadedPicture.Image);
-                this.ModifiedPicture.Image = bloomEffectImplementation.ApplyBloomEffects(coppy);
+                Bitmap bloomImage = await Task.Run(() => bloomEffectImplementation.ApplyBloomEffects(coppy));
+                //this.Invoke((Action)(() => {
+                    this.ModifiedPicture.Image = bloomImage;
+               // }));
 
                 stopwatch.Stop();
                 test.Add(stopwatch.ElapsedMilliseconds);
