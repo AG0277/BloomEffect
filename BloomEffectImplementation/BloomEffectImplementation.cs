@@ -65,7 +65,6 @@ namespace BloomEffectImplementation
         public async Task<Bitmap> ApplyBloomEffects(Bitmap originalImage)
         {
 
-
             Bitmap bloomImage = ApplyThresholdMapping(originalImage);
             Bitmap blurredBloom = ApplyGaussianBlur(bloomImage);
             Bitmap finalImage = MergePictures(originalImage, blurredBloom);
@@ -154,7 +153,7 @@ namespace BloomEffectImplementation
                             byte green = originalPixels[index + 1];
                             byte red = originalPixels[index + 2];
 
-                            float brightness = (red + green + blue) / 3.0f;
+                            float brightness = (red * 0.2126f + green * 0.7152f + blue * 0.0722f);
 
                             byte resultBlue, resultGreen, resultRed;
 

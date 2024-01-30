@@ -8,7 +8,7 @@
 
 MyProc1 proc
 
-    xor rax, rax            ; Clear rax to store temporary values
+    xor rax, rax           
     mov rbx, r8 
     mov r10d, [myInt]
     imul rbx, r10
@@ -82,17 +82,15 @@ MyProc1 endp
 .code
 MyProc2 PROC
     ; Arguments:
-    ; rcx = sourcePixels (pointer to source pixel data)
-    ; rdx = destPixels (pointer to destination pixel data)
-    ; r8  = x (current x-coordinate)
-    ; r9  = y (current y-coordinate)
-    ; r10 = kernel (pointer to kernel array of doubles)
-    ; r11d = radius (use a 32-bit register for radius)
-    ; r15d = stride (stride of the image)
-    ; r13d = height (height of the image)
-    ; xmm3 kernel
-    ; xmm2 getPixel
-    ; xmm1 overall pixel
+    ; rcx = sourcePixels 
+    ; rdx = destPixels 
+    ; r8  = x 
+    ; r9  = y 
+    ; r10 = kernel 
+    ; r11d = radius 
+    ; r15d = stride 
+    ; r13d = height 
+
 
     mov eax, r11d
     shl eax, 1
@@ -113,26 +111,26 @@ MyProc2 PROC
    
 
     ; Loop over the kernel
-    xor esi, esi  ; esi = i (loop counter)
+    xor esi, esi  
     loop_kernel:
-        ; Calculate yOffset = y + i - radius
+        ;  yOffset = y + i - radius
         mov eax, r9d  ; Copy y to eax
         add eax, esi  ; Add i
         sub eax, r11d  ; Subtract radius
-        ; Check if yOffset is within bounds (0 <= yOffset < height)
+        ; 0 <= yOffset < height
         cmp eax, 0
         jl skip_pixel
         cmp eax, r13d
         jge skip_pixel
 
-        ; Calculate index = yOffset * stride + x * bytesPerPixel
+        ; index = yOffset * stride + x * bytesPerPixel
         mov ebx, eax
         imul ebx, r15d
-        lea ebx, [rbx + r8 * 4] ; Assuming 4 bytes per pixel (bytesPerPixel = 4)
+        lea ebx, [rbx + r8 * 4] 
 
         ; Load the weight from the kernel (double-precision)
-        movsd xmm3, qword ptr [r10 + rsi * 8] ; Load kernel weight
-        CVTPD2PS xmm3, xmm3 ; convert double to float
+        movsd xmm3, qword ptr [r10 + rsi * 8] 
+        CVTPD2PS xmm3, xmm3 
         shufps xmm3,xmm3, 00h
         
         movzx r14, byte ptr[rcx+rbx+2]
@@ -155,10 +153,10 @@ MyProc2 PROC
 
 
 
-CVTPS2DQ xmm1,xmm1 ; convert from float
-mov eax, r8d           ; Copy x-coordinate to eax
-imul eax, 4            ; Multiply by 4 (assuming 4 bytes per pixel)
-imul r9d, r15d         ; Multiply by the stride
+CVTPS2DQ xmm1,xmm1 
+mov eax, r8d          
+imul eax, 4           
+imul r9d, r15d         
 add eax, r9d
 
 
@@ -215,17 +213,17 @@ MyProc3 PROC
     ; Loop over the kernel
     xor esi, esi  ; esi = i (loop counter)
     loop_kernel:
-        ; Calculate xOffset = x + i - radius
+        ; xOffset = x + i - radius
         mov eax, r8d  ; Copy x to eax
         add eax, esi  ; Add i
         sub eax, r11d  ; Subtract radius
-        ; Check if xOffset is within bounds (0 <= xOffset < width)
+        ; 0 <= xOffset < width
         cmp eax, 0
         jl skip_pixel
         cmp eax, r13d
         jge skip_pixel
 
-        ; Calculate index =y * stride + xOffSet * bytesPerPixel
+        ;  index =y * stride + xOffSet * bytesPerPixel
         mov ebx, r9d
         imul ebx, r15d
         imul eax, [myInt]

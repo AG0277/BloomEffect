@@ -58,16 +58,15 @@ namespace WindowFromsApp
         {
             stopwatch.Restart();
             List<long> test = new List<long>();
-            int iterations = 1;
+            int iterations = 5;
+
             for (int i = 0; i < iterations; i++)
             {
+                if(i>0)
                 stopwatch.Start();
-
                 Bitmap coppy = new Bitmap((Bitmap)this.UploadedPicture.Image);
                 Bitmap bloomImage = await Task.Run(() => bloomEffectImplementation.ApplyBloomEffects(coppy));
-                //this.Invoke((Action)(() => {
-                    this.ModifiedPicture.Image = bloomImage;
-               // }));
+                this.ModifiedPicture.Image = bloomImage;
 
                 stopwatch.Stop();
                 test.Add(stopwatch.ElapsedMilliseconds);
@@ -98,18 +97,23 @@ namespace WindowFromsApp
 
         private void textBox1_KeyPress(object sender, KeyPressEventArgs e)
         {
-            if (!char.IsDigit(e.KeyChar) && !char.IsControl(e.KeyChar))
+
+            if (!char.IsDigit(e.KeyChar) && !char.IsControl(e.KeyChar) )
             {
                 e.Handled = true; 
             }
-
-
         }
 
         private void textBox1_TextChanged(object sender, EventArgs e)
         {
-            int threads = Int32.Parse(textBox1.Text);
-            bloomEffectImplementation.SetThreads(threads);
+            if (!string.IsNullOrEmpty(textBox1.Text))
+            {
+                int threads = Int32.Parse(textBox1.Text);
+                if (threads > 0)
+                {
+                    bloomEffectImplementation.SetThreads(threads);
+                }
+            }
         }
     }
 }
